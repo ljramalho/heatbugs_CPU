@@ -19,93 +19,103 @@
 #define __HEATBUGS_CPU_H_
 
 
-/* Comment next to use floats. Default is doubles. */
-#define USE_PRECISION_MATH
+#include  <stdio.h>
+
+
+/**
+* Error reporting macros from cf4ocl OpenCL library by Nuno Fachada, using
+* GLib 2.0.
+* Check:
+*	https://fakenmc.github.io/cf4ocl
+*	https://fakenmc.github.io/cf4ocl/docs/latest/ccl__common_8h_source.html
+*/
+
+
+
+#define NDEBUG
 
 
 
 
-#ifdef USE_PRECISION_MATH
-#define real_t double
+/* Define NDEBUG for specific debug. Does not compile in windows. */
+
+#ifdef NDEBUG
+	#define CCL_STRD G_STRFUNC
 #else
-#define real_t float
+	#define CCL_STRD G_STRLOC
 #endif
 
 
-#define VSIZE( v ) ( sizeof( v ) / sizeof( v[0] ) )
+/* Using C99 variadic macros. */
+
+#define hb_if_err_create_goto( err, quark, error_condition, error_code, label, msg, ... ) \
+	if (error_condition) { \
+		g_debug( CCL_STRD ); \
+		g_set_error( &(err), (quark), (error_code), (msg), ##__VA_ARGS__ ); \
+		goto label; \
+	}
+
+#define hb_if_err_goto( err, label ) \
+	if ((err) != NULL) { \
+		g_debug( CCL_STRD ); \
+		goto label; \
+	}
+
+#define hb_if_err_propagate_goto( err_dest, err_src, label ) \
+	if ((err_src) != NULL) { \
+		g_debug( CCL_STRD ); \
+		g_propagate_error( err_dest, err_src ); \
+		goto label; \
+	}
 
 
-/* Input data used for simulation. */
-typedef struct simulation {
-	real_t bugs_min_ideal_temperature;
-	real_t bugs_max_ideal_temperature;
-	real_t bugs_min_output_heat;
-	real_t bugs_max_output_heat;
-	real_t bugs_random_move_chance;		/* Chance a bug will move [0..100].       */
-	real_t wrl_diffusion_rate;		/* % temperature to adjacent cells [0..1] */
-	real_t wrl_evaporation_rate;		/* % temperature's loss to 'ether' [0..1] */
-	unsigned int world_height;
-	unsigned int world_width;
-	unsigned int number_of_bugs;		/* The number of bugs in the world.       */
-	unsigned int numIterations;		/* Iterations to stop. (0 = no stop).     */
-} simulatio_t;
-
-/* Coordinates used for location. */
-typedef struct locus {
-	unsigned int lin;
-	unsigned int col;
-} locus_t;
-
-/* Related with 2D dimensions. */
-typedef struct dimensio {
-	unsigned int height;
-	unsigned int width;
-} dimensio_t;
-
-/* Bug specific data, different for each bug. */
-/* Initialized from simulation parameters.    */
-typedef struct bug {
-	real_t ideal_temperature;
-	real_t output_heat;
-	real_t unhappiness;
-	locus_t local;
-} bug_t;
+/* Swap to values of indicated 'type'. Warning! C99 extension 'typeof'. */
+#define SWAP( a, b ) { __typeof__(a) t = a; a = b; b = t; }
 
 
-typedef struct populatio {
-	unsigned int number_of_bugs;
-	bug_t *swarm;				/* Bugs vector.	The swarm...	*/
-} populatio_t;
+/** Heatbugs own error codes. **/
+enum hb_error_codes {
+	/** Successfull operation. */
+	HB_SUCCESS = 0,
+	/** Invalid parameters. */
+	HB_INVALID_PARAMETER = -1,
+	/** A command line option with missing argument. */
+	HB_PARAM_ARG_MISSING = -2,
+	/** Unknown option in the command line. */
+	HB_PARAM_OPTION_UNKNOWN = -3,
+	/** Unknown option characters in command line. */
+	HB_PARAM_CHAR_UNKNOWN = -4,
+	/** Weird error occurred while parsing parameter. */
+	HB_PARAM_PARSING = -5,
+	/** Number of bugs is zero. */
+	HB_BUGS_ZERO = -6,
+	/** Bugs exceed world slots. */
+	HB_BUGS_OVERFLOW = -7,
+	/** Bug's ideal temperature range overlaps. */
+	HB_TEMPERATURE_OVERLAP = -8,
+	/** Bug's max ideal temperature exceeds range. */
+	HB_TEMPERATURE_OUT_RANGE = -9,
+	/** Bug's output heat range overlap. */
+	HB_OUTPUT_HEAT_OVERLAP = -10,
+	/** Bug's max output heat exceeds range. */
+	HB_OUTPUT_HEAT_OUT_RANGE = -11,
+	/** Unable to open file. */
+	HB_UNABLE_OPEN_FILE = -12,
+	/** Memory alocation failed. */
+	HB_MALLOC_FAILURE = -13
+};
 
 
-typedef struct mundus {
-	dimensio_t dimension;			/* World Dimensions.	*/
-	real_t **temperature_map;		/* Temperature Array.	*/
-	char **swarm_map;			/* Bugs location Indicator Array.	*/
-} mundus_t;
 
+float average( const float *const vector, const size_t vsize )
+{
+	float sum = 0.0;
 
-typedef enum neighbours {SW, S, SE, W, E, NW, N, NE} neighbours_t;
+	for (size_t idx = 0; idx < vsize; idx++)
+		sum += vector[ idx ];
 
-typedef enum movselect {RANDOM_CHANCE, MIN_TEMPERATURE, MAX_TEMPERATURE} movselect_t;
+	return sum / vsize;
+}
 
-
-/* Create float(FArray) and char(CArray) arrays. */
-real_t **newFArray( unsigned int height, unsigned int width );
-char **newCArray( unsigned int height, unsigned int width );
-
-/* Set float array to zero. */
-void resetFArray( real_t **array, unsigned int height, unsigned int width );
-void resetCArray( char **array, unsigned int height, unsigned int width );
-
-real_t mean_unhappiness( populatio_t * const population );
-
-void setup( mundus_t * const world, populatio_t * const population, simulatio_t * const simul );
-
-locus_t bestFreeNeighbour( movselect_t const moveselect, mundus_t const * const world, locus_t const * const local );
-
-void world_diffuse( mundus_t * const world, const real_t diffusion_rate );
-void world_evaporate( mundus_t * const world, const real_t evaporation_rate );
-void bug_step( mundus_t * const world, populatio_t * const population, const real_t random_move_chance );
 
 #endif

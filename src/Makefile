@@ -1,14 +1,17 @@
-# Define required directories.
-#export OBJDIR := ${CURDIR}/obj
-#export BUILDDIR := ${CURDIR}/build
-#SRCDIRS = ${CURDIR}/src
+# -lm : Link with math library.
 
-# -lm : Link with math library-
+# http://www.rapidtables.com/code/linux/gcc/gcc-g.htm
+# -g :  No debug info.
+
+# -ansi : the same as -std=c89
+
 
 
 # Variable definitions.
 CC = gcc
-CFLAGS = -Wall -std=c99 -pedantic -g
+# CFLAGS = -std=c99 -Wall -pedantic -g
+CFLASG = -std=C99 -Wall -g
+# CFLASG = -std=C99 -Wall -O3
 BUILDDIR = ../bin
 
 
