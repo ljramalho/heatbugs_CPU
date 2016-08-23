@@ -151,12 +151,12 @@ void setup( mundus_t * const world, populatio_t * const population, simulatio_t 
 	printf("    > Generating bugs...\n");
 
 	/* Choose a 'number_of_bugs' number of random world positions,	*/
-	/* allow bugs to be initialized in them...						*/
+	/* allow bugs to be initialized in them...			*/
 	for (unsigned int bug = 0; bug < population->number_of_bugs; bug++)
 	{
 		do {
 			l = (unsigned int) g_random_int_range( 0, world->dimension.height );	/* Interval [0..height[	as it should! */
-			c = (unsigned int) g_random_int_range( 0, world->dimension.width );		/* Interval [0..width[ as it should!  */
+			c = (unsigned int) g_random_int_range( 0, world->dimension.width );	/* Interval [0..width[ as it should!  */
 		} while (world->swarm_map[l][c] == BUG);
 
 		world->swarm_map[l][c] = BUG;	/* Set the bug location in the world. */
@@ -550,7 +550,7 @@ void bug_step( mundus_t * const world, populatio_t * const population, const rea
 
 		/* The bug unhapiness is the magnitude (absolute value) of the		*/
 		/* difference between bug ideal temperature and the temperature at	*/
-		/* bug current location.											*/
+		/* bug current location.						*/
 		/* NetLogo computes unhapiness before bugs moves away from current	*/
 		/* position for each step, so first two values should be always the	*/
 		/* same; unhapiness from setup time and unhapiness of first step!	*/
@@ -662,20 +662,20 @@ int main( int argc, char *argv[] )
 	simul.bugs_min_output_heat =  15.0;			/*  5.0 */
 	simul.bugs_max_output_heat = 25.0;			/* 25.0 */
 	simul.wrl_evaporation_rate = 0.01;			/*  1%. */
-	simul.wrl_diffusion_rate  =  0.4;			/* 90%. */
+	simul.wrl_diffusion_rate  =  0.09;			/* 90%. */
 	simul.bugs_random_move_chance = 0.0;		/* 10%. Valid:[0 .. 100] */
 
-	simul.world_height = 100;
-	simul.world_width =  100;
+	simul.world_height = 5;
+	simul.world_width =  5;
 
-	simul.number_of_bugs = 200;					/* 100 Bugs in the world. */
-	simul.numIterations =  1000;				/* 0 = NonStop. */
-
-
+	simul.number_of_bugs = 15;					/* 100 Bugs in the world. */
+	simul.numIterations =  10;				/* 0 = NonStop. */
 
 
 
-	hbResultFile = fopen("../results/heatbugsC_40.csv", "w+");	/* Open file overwrite. */
+
+
+	hbResultFile = fopen("../results/heatbugsC.csv", "w+");	/* Open file overwrite. */
 
 	if (hbResultFile == NULL) {
 		fprintf(stderr, "Error: Could not open output file.\n\n");

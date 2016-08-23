@@ -42,12 +42,12 @@ typedef struct simulation {
 	real_t bugs_min_output_heat;
 	real_t bugs_max_output_heat;
 	real_t bugs_random_move_chance;		/* Chance a bug will move [0..100].       */
-	real_t wrl_diffusion_rate;			/* % temperature to adjacent cells [0..1] */
+	real_t wrl_diffusion_rate;		/* % temperature to adjacent cells [0..1] */
 	real_t wrl_evaporation_rate;		/* % temperature's loss to 'ether' [0..1] */
 	unsigned int world_height;
 	unsigned int world_width;
 	unsigned int number_of_bugs;		/* The number of bugs in the world.       */
-	unsigned int numIterations;			/* Iterations to stop. (0 = no stop).     */
+	unsigned int numIterations;		/* Iterations to stop. (0 = no stop).     */
 } simulatio_t;
 
 /* Coordinates used for location. */
@@ -62,8 +62,8 @@ typedef struct dimensio {
 	unsigned int width;
 } dimensio_t;
 
-/* Bug specific data, different for each bug.			*/
-/* Initialized from simulation parameters.				*/
+/* Bug specific data, different for each bug. */
+/* Initialized from simulation parameters.    */
 typedef struct bug {
 	real_t ideal_temperature;
 	real_t output_heat;
@@ -74,13 +74,14 @@ typedef struct bug {
 
 typedef struct populatio {
 	unsigned int number_of_bugs;
-	bug_t *swarm;					/* Bugs vector.	The swarm...	*/
+	bug_t *swarm;				/* Bugs vector.	The swarm...	*/
 } populatio_t;
+
 
 typedef struct mundus {
 	dimensio_t dimension;			/* World Dimensions.	*/
 	real_t **temperature_map;		/* Temperature Array.	*/
-	char **swarm_map;				/* Bugs location Indicator Array.	*/
+	char **swarm_map;			/* Bugs location Indicator Array.	*/
 } mundus_t;
 
 
