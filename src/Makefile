@@ -1,38 +1,40 @@
-# -lm : Link with math library.
-
 # http://www.rapidtables.com/code/linux/gcc/gcc-g.htm
-# -g :  No debug info.
-
+# -g    : No debug info.
+# -lm   : Link with math library.
 # -ansi : the same as -std=c89
 
 
 
 # Variable definitions.
 CC = gcc
-# CFLAGS = -std=c99 -Wall -pedantic -g
-CFLASG = -std=C99 -Wall -g
-# CFLASG = -std=C99 -Wall -O3
+# CFLAGS = -Wall -std=c99 -pedantic -g
+CFLAGS = -Wall -std=c99 -O3
+# CFLAGS = -Wall -std=c99 -pedantic -g
 BUILDDIR = ../bin
+RESULTSDIR = ../results
 
 
 .PHONY: all
-all: clean compile
+all: mkdirs clean compile
 	@echo MAKE Complete...
+
 
 .PHONY: compile
 compile: heatbugs.c heatbugs.h
 	@if [ ! -d $(BUILDDIR) ]; then mkdir $(BUILDDIR); fi
 	$(CC) heatbugs.c heatbugs.h $(CFLAGS) `pkg-config --cflags --libs glib-2.0` -o $(BUILDDIR)/heatbugs
-#	$(CC) heatbugs.c heatbugs.h $(CFLAGS) `pkg-config --cflags --libs cf4ocl2 glib-2.0` -lOpenCL -o $(BUILDDIR)/heatbugs
 
 
 .PHONY: mkdirs
 mkdirs:
-	mkdir -p $(OBJDIR)
+#	@if [ ! -d $(BUILDDIR) ]; then mkdir -p $(BUILDDIR); fi
+#	@if [ ! -d $(RESULTSDIR) ]; then mkdir -p $(RESULTSDIR); fi
 	mkdir -p $(BUILDDIR)
+	mkdir -p $(RESULTSDIR)
+
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILDDIR)/heatbugs
+	rm -rf $(BUILDDIR)/*
 #	rm -d $(BUILDDIR)
 #	rm -drf $(BUILDDIR)

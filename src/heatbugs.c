@@ -21,7 +21,7 @@
 			/* compile under -std=c99 compiler option, because    */
 			/* 'getopt' is POSIX, not c99.                        */
 
-#include <stdio.h>	/* printf(...)	*/
+#include <stdio.h>	/* printf(...), fscanf(...), fprintf(...)             */
 #include <stdlib.h>	/* exit(...)	*/
 #include <unistd.h>
 
@@ -43,17 +43,17 @@
 #define WORLD_WIDTH		100
 #define WORLD_HEIGTH		100
 
-#define WORLD_DIFFUSION_RATE	0.90f	/* [0..1], % temperature to   */
-					/* neighbour cells.           */
+/* Percentage temperature to be spread to neighbouring cells. */
+#define WORLD_DIFFUSION_RATE	0.90f	/* Range: [0..1]. */
+/* Percentage temperature to be lost to the 'ether'.          */
+#define WORLD_EVAPORATION_RATE	0.01f	/* Range: [0..1]. */
 
-#define WORLD_EVAPORATION_RATE	0.01f	/* [0..1], % temperature loss */
-					/* to 'ether'.                */
-
-#define BUGS_RAND_MOVE_CHANCE	0.00f	/* [0..100], Chance a bug will move.  */
-#define BUGS_TEMP_MIN_IDEAL	10	/* [0 .. 200] */
-#define BUGS_TEMP_MAX_IDEAL	40	/* [0 .. 200] */
-#define BUGS_HEAT_MIN_OUTPUT	5	/* [0 .. 100] */
-#define BUGS_HEAT_MAX_OUTPUT	25	/* [0 .. 100] */
+/* Chance a bug will move randomly. */
+#define BUGS_RAND_MOVE_CHANCE	0.00f	/* Range: [0 .. 100]   */
+#define BUGS_TEMP_MIN_IDEAL	10	/* Range: 0,1,2 .. 200 */
+#define BUGS_TEMP_MAX_IDEAL	40	/* Range: 0,1,2 .. 200 */
+#define BUGS_HEAT_MIN_OUTPUT	5	/* Range: 0,1,2 .. 100 */
+#define BUGS_HEAT_MAX_OUTPUT	25	/* Range: 0,1,2 .. 100 */
 
 /* The file to send results. Directory must exist. */
 #define OUTPUT_FILENAME		"../results/heatbugsCPU.csv"
@@ -61,7 +61,6 @@
 
 /** Simulation constants. */
 #define NUM_NEIGHBOURS 8
-
 
 /** Used to drive what shall happen to the agent at each step. */
 #define FIND_ANY_FREE		0x00ffffff
@@ -79,14 +78,14 @@
 #define A_EMPTY_CELL	0x00000000
 
 
-/** Use in swarm_map */
-#define HAS_BUG( swarm_map ) ((swarm_map) != A_EMPTY_CELL)
-#define HAS_NO_BUG( swarm_map ) ((swarm_map) == A_EMPTY_CELL)
+/** Used in swarm_map operations. */
+#define HAS_BUG( swarm_map_locus ) ((swarm_map_locus) != A_EMPTY_CELL)
+#define HAS_NO_BUG( swarm_map_locus ) ((swarm_map_locus) == A_EMPTY_CELL)
 
-#define NEW_BUG_IN( swarm_map ) swarm_map = A_BUG
+#define NEW_BUG_IN( swarm_map_locus ) swarm_map_locus = A_BUG
 
 
-/** Use in swarm. */
+/** Used in swarm. */
 
 /* Every time bug change position, use SET_BUG_LOCAL(...) with new position. */
 #define SET_BUG_LOCAL( swarm_locus, position ) swarm_locus = position
@@ -123,7 +122,7 @@ typedef struct parameters {
 	/* [0 .. 100], max heat a bug leave in the world in each step. */
 	unsigned int bugs_heat_max_output;
 	/* Seed to be used as random generator initialization value. */
-	unsigned int seed;
+	unsigned int seed;	/* Type required by Glib's g_random_set_seed(...) */
 	/* File to send results. */
 	char output_filename[256];
 } Parameters_t;
@@ -134,8 +133,8 @@ typedef struct parameters {
 /** The bug data type. */
 typedef struct bug {
 	size_t locus;
-	unsigned int ideal_temperature;
-	unsigned int output_heat;
+	unsigned int ideal_temperature;	/* The temperature bug want to be at. */
+	unsigned int output_heat;	/* How much heat bug emit per time step. */
 } bug_t;
 
 
@@ -203,7 +202,7 @@ void getSimulParameters( Parameters_t *const params, int argc,
 	/* The string 't:T:h:H:r:n:d:e:w:W:i:f:' is the parameter string to   */
 	/* be checked by 'getopt' function.                                   */
 	/* The ':' character means that a value is required after the         */
-	/* parameter selector character (i.e. -t 50  or  -t50).               */
+	/* parameter selector character (that is: -t 50  or  -t50).           */
 	const char matches[] = "t:T:h:H:r:n:d:e:w:W:i:s:f:";
 
 
@@ -385,7 +384,7 @@ error_handler:
 void setupBuffers( HBBuffers_t *const buff, const Parameters_t *const params,
 				GError **err )
 {
-	GError *err_setbuf = NULL;
+	/* GError *err_setbuf = NULL; */
 
 
 	/** SWARM. */
@@ -428,7 +427,7 @@ void setupBuffers( HBBuffers_t *const buff, const Parameters_t *const params,
 
 
 error_handler:
-	/* If error hadler is reached leave function imediately. */
+	/* If error handler is reached leave function imediately. */
 
 	return;
 }
@@ -489,7 +488,7 @@ void initiate( HBBuffers_t *const buff, const Parameters_t *const params )
 		/* Update initial bug unhappiness as abs(ideal_temperature -
 		 * temperature).
 		 * Since world temperature is initial zero, it turns out that
-		 * initial unhappiness  = ideal temperature.
+		 * initial unhappiness = ideal_temperature.
 		 * */
 
 		buff->unhappiness[ bug_id ] = (float) buff->swarm[ bug_id ].ideal_temperature;
@@ -619,227 +618,193 @@ void comp_world_heat_v2( const float *const heat_map,
 	size_t i, j, c;
 
 
-/* Debug */
-/*
-for (size_t wpos = 0; wpos < params->world_size; wpos++)
-	heat_map[wpos] = wpos + 1;
-*/
-
-
-	/** NORTH*/
+	/** + NORTH*/
 		/* Compute north cells contribution. */
 
 	i = 0;
-
 	j = params->world_width;
 
-	while (i < params->world_size - params->world_width)
+	while (j < params->world_size)
 		heat_buffer[i++] = heat_map[j++];
 
 	j = 0;
 
-	while (i < params->world_size)
+	while (j < params->world_width)
 		heat_buffer[i++] = heat_map[j++];
 
 
-	/** SOUTH */
+	/** + SOUTH */
 		/* Compute south cells contributions. */
 
-	i = 0;
+	i = params->world_width;
+	j = 0;
 
-	j = params->world_size - params->world_width;
+	while (i < params->world_size)
+		heat_buffer[i++] += heat_map[j++];
+
+	i = 0;
 
 	while (i < params->world_width)
 		heat_buffer[i++] += heat_map[j++];
 
-	j = 0;
 
-	while (i < params->world_size)
-		heat_buffer[i++] += heat_map[j++];
-
-
-	/** EAST */
+	/** + EAST */
 		/* Compute east cells contributions. */
 
 	i = 0;
+	j = 0;
 
 	while (i < params->world_size)
 	{
-		j = i + 1;
-		c = 0;
+		j++;
+		c = params->world_width;
 
-		while (c < params->world_width - 1)
+		while (c > 1)
 		{
 			heat_buffer[i++] += heat_map[j++];
-			c++;
+			c--;
 		}
 
-		j = i + 1 - params->world_width;
-
-		heat_buffer[i++] += heat_map[j];
+		heat_buffer[i++] += heat_map[j - params->world_width];
 	}
 
 
-	/** WEST */
+	/** + WEST */
 		/* Compute west cells contribution. */
 
 	i = 0;
+	j = 0;
 
 	while (i < params->world_size)
 	{
-		j = i + params->world_width - 1;
+		i++;
+		c = params->world_width;
 
-		heat_buffer[i++] += heat_map[j];
-
-		j = i - 1;
-		c = 0;
-
-		while (c < params-> world_width - 1)
+		while (c > 1)
 		{
 			heat_buffer[i++] += heat_map[j++];
-			c++;
+			c--;
 		}
+
+		heat_buffer[i - params->world_width] += heat_map[j++];
 	}
 
 
-	/** NORTHEAST */
+	/** + NORTHEAST */
 		/* Compute northeast cells contributions. */
 
 	i = 0;
+	j = params->world_width;
 
-	while (i < params->world_size - params->world_width)
+	while (j < params->world_size)
 	{
-		j = i + params->world_width + 1;
-		c = 0;
+		j++;
+		c = params->world_width;
 
-		while (c < params->world_width - 1)
+		while (c > 1)
 		{
 			heat_buffer[i++] += heat_map[j++];
-			c++;
+			c--;
 		}
 
-		j = i + 1;
-
-		heat_buffer[i++] += heat_map[j];
+		heat_buffer[i++] += heat_map[j - params->world_width];
 	}
 
 	j = 1;
-	c = 0;
 
-	while (c < params->world_width - 1)
-	{
+	while (j < params->world_width)
 		heat_buffer[i++] += heat_map[j++];
-		c++;
-	}
 
-	j = 0;
-
-	heat_buffer[i] += heat_map[j];
+	heat_buffer[i] += heat_map[0];
 
 
-	/** NORTHWEST */
+	/** + NORTHWEST */
 		/* Compute northwest cells contributions. */
 
 	i = 0;
+	j = params->world_width;
 
-	while (i < params->world_size - params->world_width)
+	while (j < params->world_size)
 	{
-		j = i + (params->world_width << 1) - 1;
+		i++;
+		c = params->world_width;
 
-		heat_buffer[i++] += heat_map[j];
-
-		j = i + params->world_width - 1;
-		c = 0;
-
-		while (c < params->world_width - 1)
+		while (c > 1)
 		{
 			heat_buffer[i++] += heat_map[j++];
-			c++;
+			c--;
 		}
+
+		heat_buffer[i - params->world_width] += heat_map[j++];
 	}
-
-	j = params->world_width - 1;
-
-	heat_buffer[i++] += heat_map[j];
 
 	j = 0;
-	c = 0;
+	i++;
 
-	while (c < params->world_width - 1)
-	{
+	while (i < params->world_size)
 		heat_buffer[i++] += heat_map[j++];
-		c++;
-	}
+
+	heat_buffer[i - params->world_width] += heat_map[j];
 
 
-	/** SOUTHEST */
+	/** + SOUTHEAST */
 		/* Compute southeast cells contributions. */
 
-	i = 0;
-	j = params->world_size - params->world_width + 1;
-	c = 0;
-
-	while (c < params->world_width - 1)
-	{
-		heat_buffer[i++] += heat_map[j++];
-		c++;
-	}
-
-	j = params->world_size - params->world_width;
-
-	heat_buffer[i++] += heat_map[j];
+	i = params->world_width;
+	j = 0;
 
 	while (i < params->world_size)
 	{
-		j = i - params->world_width + 1;
-		c = 0;
+		j++;
+		c = params->world_width;
 
-		while (c < params->world_width - 1)
+		while (c > 1)
 		{
 			heat_buffer[i++] += heat_map[j++];
-			c++;
+			c--;
 		}
 
-		j = i + 1 - (params->world_width << 1);
-
-		heat_buffer[i++] += heat_map[j++];
+		heat_buffer[i++] += heat_map[j - params->world_width];
 	}
+
+	i = 0;
+	j++;
+
+	while (j < params->world_size)
+		heat_buffer[i++] += heat_map[j++];
+
+	heat_buffer[i] += heat_map[j - params->world_width];
 
 
 	/** SOUTHWEST */
 		/* Compute southwest cells contribution. */
 
-	i = 0;
-
-	j = params->world_size - 1;
-
-	heat_buffer[i++] += heat_map[j];
-
-	j = params->world_size - params->world_width + 1;
-	c = 0;
-
-	while (c < params->world_width - 1)
-	{
-		heat_buffer[i++] += heat_map[j++];
-		c++;
-	}
+	i = params->world_width;
+	j = 0;
 
 	while (i < params->world_size)
 	{
-		j = i - 1;
+		i++;
+		c = params->world_width;
 
-		heat_buffer[i++] += heat_map[j];
-
-		j = i - params->world_width - 1;
-		c = 0;
-
-		while (c < params->world_width - 1)
+		while (c > 1)
 		{
 			heat_buffer[i++] += heat_map[j++];
-			c++;
+			c--;
 		}
+
+		heat_buffer[i - params->world_width] += heat_map[j++];
 	}
 
+	i = 1;
+
+	while (i < params->world_width)
+		heat_buffer[i++] += heat_map[j++];
+
+	heat_buffer[0] += heat_map[j];
+
+
+	/** Compute remaining heat and evaporation. */
 
 	for (i = 0; i < params->world_size; i++)
 	{
@@ -1176,7 +1141,7 @@ void bug_step( bug_t *const swarm, unsigned int *const swarm_map,
 void simulate( HBBuffers_t *const buff, const Parameters_t *const params,
 			FILE *hbResultFile, GError **err )
 {
-	GError *err_simulate = NULL;
+	/* GError *err_simulate = NULL; */
 
 	float unhapp_average;
 	hbBufferSelect_t bufsel;
@@ -1201,7 +1166,7 @@ void simulate( HBBuffers_t *const buff, const Parameters_t *const params,
 	/**      SIMULATION LOOP      **/
 	/*******************************/
 
-	while ( (iter_counter < params-> numIterations)
+	while ( (iter_counter < params->numIterations)
 		|| (params->numIterations == 0) )
 	{
 		/** Compute world heat, diffusion followed by evaporation. */
@@ -1277,13 +1242,13 @@ int main( int argc, char *argv[] )
 error_handler:
 
 	/* Handle error. */
-	fprintf( stderr, "Error: %s\n", err_main->message );
+	fprintf( stderr, "Error: %s\n\n", err_main->message );
 	g_error_free( err_main );
 
 
 clean_all:
 
-	fclose( hbResultFile );
+	if (hbResultFile) fclose( hbResultFile );
 
 	if (buff.unhappiness) free( buff.unhappiness );
 	if (buff.heat_map[ 1 ])	free( buff.heat_map[ 1 ] );

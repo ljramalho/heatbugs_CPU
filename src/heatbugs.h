@@ -50,8 +50,8 @@
 
 #define hb_if_err_create_goto( err, quark, error_condition, error_code, label, msg, ... ) \
 	if (error_condition) { \
-		g_debug( CCL_STRD ); \
 		g_set_error( &(err), (quark), (error_code), (msg), ##__VA_ARGS__ ); \
+		g_debug( CCL_STRD ); \
 		goto label; \
 	}
 
@@ -64,7 +64,8 @@
 #define hb_if_err_propagate_goto( err_dest, err_src, label ) \
 	if ((err_src) != NULL) { \
 		g_debug( CCL_STRD ); \
-		g_propagate_error( err_dest, err_src ); \
+		g_propagate_error( (err_dest), (err_src) ); \
+		err_src = NULL; \
 		goto label; \
 	}
 
