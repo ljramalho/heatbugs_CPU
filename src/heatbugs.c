@@ -59,6 +59,9 @@
 #define OUTPUT_FILENAME		"../results/heatbugsCPU.csv"
 
 
+/** Parameters parsing constants. */
+#define COUNT 1
+
 /** Simulation constants. */
 #define NUM_NEIGHBOURS 8
 
@@ -141,8 +144,8 @@ typedef struct bug {
 /** Simulation buffers. */
 typedef struct hb_buffers {
 	bug_t *swarm;			/* SIZE: BUGS_NUM			- Bug's position in the swarm_map. */
-	unsigned int *swarm_map;	/* SIZE: WORLD_HEIGHT * WORLD_WIDTH	- Bug's map. Each cell points to NULL (has no bug), or to a bug_t. */
-	float *heat_map[2];		/* SIZE: WORLD_HEIGHT * WORLD_WIDTH	- Temperature map (heat_map) & the buffer (heat_buffer). */
+	unsigned int *swarm_map;	/* SIZE: WORLD_HEIGHT * WORLD_WIDTH	- Bug's presence. Each cell is zero (has no bug), or int (has bug). */
+	float *heat_map[2];		/* SIZE: WORLD_HEIGHT * WORLD_WIDTH	- Temperature maps: heat_map (primary and buffer). */
 	float *unhappiness;		/* SIZE: NUM_BUGS			- The Unhappiness vector. */
 } HBBuffers_t;
 
@@ -197,7 +200,9 @@ void getSimulParameters( Parameters_t *const params, int argc,
 {
 	FILE *uranddev = NULL;
 
-	int c;	/* Parsed command line option. */
+	size_t rd;	/* fread(...) return value. (objects read). */
+
+	int c;		/* Parsed command line option. */
 
 	/* The string 't:T:h:H:r:n:d:e:w:W:i:f:' is the parameter string to   */
 	/* be checked by 'getopt' function.                                   */
@@ -230,7 +235,7 @@ void getSimulParameters( Parameters_t *const params, int argc,
 		HB_UNABLE_OPEN_FILE, error_handler,
 		"Could not open urandom device to get seed." );
 
-	fread( &params->seed, sizeof( unsigned int ), 1, uranddev );
+	rd = fread( &params->seed, sizeof( params->seed ), COUNT, uranddev );
 	fclose( uranddev );
 
 
@@ -358,6 +363,9 @@ void getSimulParameters( Parameters_t *const params, int argc,
 		HB_OUTPUT_HEAT_OUT_RANGE, error_handler,
 		"Bug's max output heat is out of range." );
 
+	/* Seed related problem. */
+
+
 	/* If numeber of bugs is 80% of the world space issue a warning. */
 	if (params->bugs_number >= 0.8 * params->world_size)
 		fprintf( stderr,
@@ -459,7 +467,6 @@ void initiate( HBBuffers_t *const buff, const Parameters_t *const params )
 
 
 	/* Initiate swarm (that is, bug population) and swarm map. */
-//	printf( "    > Generating bugs...\n" );
 
 	/* Choose 'bugs_number' number of random world positions. */
 	for (size_t bug_id = 0; bug_id < params->bugs_number; bug_id++)
@@ -776,7 +783,7 @@ void comp_world_heat_v2( const float *const heat_map,
 	heat_buffer[i] += heat_map[j - params->world_width];
 
 
-	/** SOUTHWEST */
+	/** + SOUTHWEST */
 		/* Compute southwest cells contribution. */
 
 	i = params->world_width;
@@ -819,24 +826,6 @@ void comp_world_heat_v2( const float *const heat_map,
 
 		heat_buffer[ i ] = heat_buffer[ i ] * (1 - params->world_evaporation_rate);
 	}
-
-
-/* Debug */
-/*
-	size_t pos;
-	size_t lin = params->world_height - 1;
-	do {
-		for (size_t col = 0; col < params->world_width; col++)
-		{
-			pos = lin * params->world_width + col;
-
-			printf( "%05.2f ", heat_buffer[pos] );
-		}
-		printf( "\n" );
-	} while (lin-- > 0);
-
-	exit(0);
-*/
 
 	return;
 }
