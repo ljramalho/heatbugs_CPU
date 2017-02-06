@@ -96,6 +96,11 @@
 #define SET_BUG_OUTPUT_HEAT( swarm_outHeat, outHeat ) swarm_outHeat = outHeat
 
 
+/** This is the selector for world_heat in hb_buffers structure (see it below). */
+#define MAP	0
+#define BUFFER	1
+
+
 
 
 /** Input data used for simulation. */
@@ -145,21 +150,16 @@ typedef struct bug {
 typedef struct hb_buffers {
 	bug_t *swarm;			/* SIZE: BUGS_NUM			- Bug's position in the swarm_map. */
 	unsigned int *swarm_map;	/* SIZE: WORLD_HEIGHT * WORLD_WIDTH	- Bug's presence. Each cell is zero (has no bug), or int (has bug). */
-	float *heat_map[2];		/* SIZE: WORLD_HEIGHT * WORLD_WIDTH	- Temperature maps: heat_map (primary and buffer). */
+	float *world_heat[2];		/* SIZE: WORLD_HEIGHT * WORLD_WIDTH	- Temperature maps: heat_map (primary and buffer). */
 	float *unhappiness;		/* SIZE: NUM_BUGS			- The Unhappiness vector. */
 } HBBuffers_t;
 
 
-/** Buffers selector. In each step they swap value to indicate the correct 'heat_map' buffer to be sent to kernel. */
-typedef struct hb_buffer_select {
-	unsigned int main;
-	unsigned int secd;
-} hbBufferSelect_t;
 
 
+const char version[] = "Heatbugs simulation for CPU (serial processing) v3.2 with Glib-2.0 randoms.";
 
 
-const char version[] = "Heatbugs simulation for CPU (serial processing) v3.0 with Glib-2.0 randoms.";
 
 
 /* To address bug's position neighbourhood. */
@@ -168,7 +168,6 @@ enum {SW = 0, S, SE, W, E, NW, N, NE};
 
 
 #define HB_ERROR hb_error_quark()
-
 
 static GQuark hb_error_quark( void ) {
 	return g_quark_from_static_string( "hb-error-quark" );
@@ -412,16 +411,16 @@ void setupBuffers( HBBuffers_t *const buff, const Parameters_t *const params,
 
 
 	/** HEAT MAP & Buffer. */
-	buff->heat_map[ 0 ] = (float *) malloc( params->world_size * sizeof( float ) );
+	buff->world_heat[ MAP ] = (float *) malloc( params->world_size * sizeof( float ) );
 	hb_if_err_create_goto( *err, HB_ERROR,
-		buff->heat_map[ 0 ] == NULL,
+		buff->world_heat[ MAP ] == NULL,
 		HB_MALLOC_FAILURE, error_handler,
 		"Unable to allocate memory for heat map array." );
 
 	/* Buffer... */
-	buff->heat_map[ 1 ] = (float *) malloc( params->world_size * sizeof( float ) );
+	buff->world_heat[ BUFFER ] = (float *) malloc( params->world_size * sizeof( float ) );
 	hb_if_err_create_goto( *err, HB_ERROR,
-		buff->heat_map[ 1 ] == NULL,
+		buff->world_heat[ BUFFER ] == NULL,
 		HB_MALLOC_FAILURE, error_handler,
 		"Unable to allocate memory for heat map buffer array." );
 
@@ -461,8 +460,10 @@ void initiate( HBBuffers_t *const buff, const Parameters_t *const params )
 
 	/* Set vectors to zero. */
 	memset( buff->swarm_map, RESET, params->world_size * sizeof( unsigned int ) );
-	memset( buff->heat_map[ 0 ], RESET, params->world_size * sizeof( float ) );
-	memset( buff->heat_map[ 1 ], RESET, params->world_size * sizeof( float ) );
+
+	/* WARNING: memset may not be portable when zero down non IEEE 754 floats. */
+	memset( buff->world_heat[ MAP ], RESET, params->world_size * sizeof( float ) );
+	memset( buff->world_heat[ BUFFER ], RESET, params->world_size * sizeof( float ) );
 	memset( buff->unhappiness, RESET, params->bugs_number * sizeof( float ) );
 
 
@@ -618,9 +619,8 @@ for (size_t wpos = 0; wpos < params->world_size; wpos++)
 
 
 
-void comp_world_heat_v2( const float *const heat_map,
-				float *const heat_buffer,
-				const Parameters_t *const params )
+void comp_world_heat_v2( float *heat_map, float *heat_buffer,
+					const Parameters_t *const params )
 {
 	size_t i, j, c;
 
@@ -632,12 +632,12 @@ void comp_world_heat_v2( const float *const heat_map,
 	j = params->world_width;
 
 	while (j < params->world_size)
-		heat_buffer[i++] = heat_map[j++];
+		heat_buffer[ i++ ] = heat_map[ j++ ];
 
 	j = 0;
 
 	while (j < params->world_width)
-		heat_buffer[i++] = heat_map[j++];
+		heat_buffer[ i++ ] = heat_map[ j++ ];
 
 
 	/** + SOUTH */
@@ -647,12 +647,12 @@ void comp_world_heat_v2( const float *const heat_map,
 	j = 0;
 
 	while (i < params->world_size)
-		heat_buffer[i++] += heat_map[j++];
+		heat_buffer[ i++ ] += heat_map[ j++ ];
 
 	i = 0;
 
 	while (i < params->world_width)
-		heat_buffer[i++] += heat_map[j++];
+		heat_buffer[ i++ ] += heat_map[ j++ ];
 
 
 	/** + EAST */
@@ -668,11 +668,11 @@ void comp_world_heat_v2( const float *const heat_map,
 
 		while (c > 1)
 		{
-			heat_buffer[i++] += heat_map[j++];
+			heat_buffer[ i++ ] += heat_map[ j++ ];
 			c--;
 		}
 
-		heat_buffer[i++] += heat_map[j - params->world_width];
+		heat_buffer[ i++ ] += heat_map[ j - params->world_width ];
 	}
 
 
@@ -689,11 +689,11 @@ void comp_world_heat_v2( const float *const heat_map,
 
 		while (c > 1)
 		{
-			heat_buffer[i++] += heat_map[j++];
+			heat_buffer[ i++ ] += heat_map[ j++ ];
 			c--;
 		}
 
-		heat_buffer[i - params->world_width] += heat_map[j++];
+		heat_buffer[ i - params->world_width ] += heat_map[ j++ ];
 	}
 
 
@@ -710,19 +710,19 @@ void comp_world_heat_v2( const float *const heat_map,
 
 		while (c > 1)
 		{
-			heat_buffer[i++] += heat_map[j++];
+			heat_buffer[ i++ ] += heat_map[ j++ ];
 			c--;
 		}
 
-		heat_buffer[i++] += heat_map[j - params->world_width];
+		heat_buffer[ i++ ] += heat_map[ j - params->world_width ];
 	}
 
 	j = 1;
 
 	while (j < params->world_width)
-		heat_buffer[i++] += heat_map[j++];
+		heat_buffer[ i++ ] += heat_map[ j++ ];
 
-	heat_buffer[i] += heat_map[0];
+	heat_buffer[ i ] += heat_map[ 0 ];
 
 
 	/** + NORTHWEST */
@@ -738,20 +738,20 @@ void comp_world_heat_v2( const float *const heat_map,
 
 		while (c > 1)
 		{
-			heat_buffer[i++] += heat_map[j++];
+			heat_buffer[ i++ ] += heat_map[ j++ ];
 			c--;
 		}
 
-		heat_buffer[i - params->world_width] += heat_map[j++];
+		heat_buffer[ i - params->world_width ] += heat_map[ j++ ];
 	}
 
 	j = 0;
 	i++;
 
 	while (i < params->world_size)
-		heat_buffer[i++] += heat_map[j++];
+		heat_buffer[ i++ ] += heat_map[ j++ ];
 
-	heat_buffer[i - params->world_width] += heat_map[j];
+	heat_buffer[ i - params->world_width ] += heat_map[ j ];
 
 
 	/** + SOUTHEAST */
@@ -767,20 +767,20 @@ void comp_world_heat_v2( const float *const heat_map,
 
 		while (c > 1)
 		{
-			heat_buffer[i++] += heat_map[j++];
+			heat_buffer[ i++ ] += heat_map[ j++ ];
 			c--;
 		}
 
-		heat_buffer[i++] += heat_map[j - params->world_width];
+		heat_buffer[ i++ ] += heat_map[ j - params->world_width ];
 	}
 
 	i = 0;
 	j++;
 
 	while (j < params->world_size)
-		heat_buffer[i++] += heat_map[j++];
+		heat_buffer[ i++ ] += heat_map[ j++ ];
 
-	heat_buffer[i] += heat_map[j - params->world_width];
+	heat_buffer[ i ] += heat_map[ j - params->world_width ];
 
 
 	/** + SOUTHWEST */
@@ -796,19 +796,19 @@ void comp_world_heat_v2( const float *const heat_map,
 
 		while (c > 1)
 		{
-			heat_buffer[i++] += heat_map[j++];
+			heat_buffer[ i++ ] += heat_map[ j++ ];
 			c--;
 		}
 
-		heat_buffer[i - params->world_width] += heat_map[j++];
+		heat_buffer[ i - params->world_width ] += heat_map[ j++ ];
 	}
 
 	i = 1;
 
 	while (i < params->world_width)
-		heat_buffer[i++] += heat_map[j++];
+		heat_buffer[ i++ ] += heat_map[ j++ ];
 
-	heat_buffer[0] += heat_map[j];
+	heat_buffer[ 0 ] += heat_map[ j ];
 
 
 	/** Compute remaining heat and evaporation. */
@@ -826,6 +826,12 @@ void comp_world_heat_v2( const float *const heat_map,
 
 		heat_buffer[ i ] = heat_buffer[ i ] * (1 - params->world_evaporation_rate);
 	}
+
+
+	/** Swap, so BUFFER becomes the new MAP. */
+
+	/* Warning, this macro is using C99 extension. */
+	SWAP( heat_buffer, heat_map );
 
 	return;
 }
@@ -1079,7 +1085,7 @@ void bug_step( bug_t *const swarm, unsigned int *const swarm_map,
 			A variable is used to hold what to do, (1), (2) or (3).
 			However the order must be reversed since (1), when
 			happen, takes precedence over (2) or (3), whatever
-			(2) XOR (3) is true or not.
+			(2) XOR (3) are true or not.
 		*/
 
 		todo = (heat_map[ bug_locus ] < swarm[ BUG ].ideal_temperature)
@@ -1120,6 +1126,9 @@ void bug_step( bug_t *const swarm, unsigned int *const swarm_map,
 		swarm_map[ bug_locus ] = A_EMPTY_CELL;
 		swarm_map[ bug_new_locus ] = A_BUG;
 	} /* END_for_each_bug */
+
+	#undef BUG
+
 } /* end bug_step(...) */
 
 
@@ -1133,7 +1142,6 @@ void simulate( HBBuffers_t *const buff, const Parameters_t *const params,
 	/* GError *err_simulate = NULL; */
 
 	float unhapp_average;
-	hbBufferSelect_t bufsel;
 	size_t iter_counter;
 
 
@@ -1146,11 +1154,6 @@ void simulate( HBBuffers_t *const buff, const Parameters_t *const params,
 
 	iter_counter = 0;
 
-
-	bufsel.main = 0;    /* On first step, main buffer has index 0.	*/
-	bufsel.secd = 1;    /* on first step, secondary buffer has index 1. */
-
-
 	/*******************************/
 	/**      SIMULATION LOOP      **/
 	/*******************************/
@@ -1159,16 +1162,13 @@ void simulate( HBBuffers_t *const buff, const Parameters_t *const params,
 		|| (params->numIterations == 0) )
 	{
 		/** Compute world heat, diffusion followed by evaporation. */
-		/* Use 'bufsel' to point the current buffer. */
-		comp_world_heat_v2( buff->heat_map[bufsel.main],
-					buff->heat_map[bufsel.secd],
-					params );
+		comp_world_heat_v2( buff->world_heat[ MAP ],
+					buff->world_heat[ BUFFER ], params );
 
 		/** Perform bug step. */
 		/* Use 'bufsel' to point the correct buffer. */
-		bug_step( buff->swarm, buff->swarm_map,
-				buff->heat_map[bufsel.secd], buff->unhappiness,
-				params );
+		bug_step( buff->swarm, buff->swarm_map, buff->world_heat[ MAP ],
+				buff->unhappiness, params );
 
 		/** Get unhappiness. */
 		unhapp_average = average( buff->unhappiness, params->bugs_number );
@@ -1179,9 +1179,6 @@ void simulate( HBBuffers_t *const buff, const Parameters_t *const params,
 		/** Prepare next iteration. */
 
 		iter_counter++;
-
-		/* Warning, this macro is using C99 extension. */
-		SWAP( bufsel.main, bufsel.secd );
 	}
 }
 
@@ -1240,8 +1237,8 @@ clean_all:
 	if (hbResultFile) fclose( hbResultFile );
 
 	if (buff.unhappiness) free( buff.unhappiness );
-	if (buff.heat_map[ 1 ])	free( buff.heat_map[ 1 ] );
-	if (buff.heat_map[ 0 ]) free( buff.heat_map[ 0 ] );
+	if (buff.world_heat[ BUFFER ]) free( buff.world_heat[ BUFFER ] );
+	if (buff.world_heat[ MAP ]) free( buff.world_heat[ MAP ] );
 	if (buff.swarm_map) free( buff.swarm_map );
 	if (buff.swarm) free( buff.swarm );
 
