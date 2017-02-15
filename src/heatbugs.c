@@ -619,8 +619,7 @@ for (size_t wpos = 0; wpos < params->world_size; wpos++)
 
 
 
-void comp_world_heat_v2( float *heat_map, float *heat_buffer,
-					const Parameters_t *const params )
+void comp_world_heat_v2( float **world_heat, const Parameters_t *const params )
 {
 	size_t i, j, c;
 
@@ -632,12 +631,12 @@ void comp_world_heat_v2( float *heat_map, float *heat_buffer,
 	j = params->world_width;
 
 	while (j < params->world_size)
-		heat_buffer[ i++ ] = heat_map[ j++ ];
+		world_heat[ BUFFER ][ i++ ] = world_heat[ MAP ][ j++ ];
 
 	j = 0;
 
 	while (j < params->world_width)
-		heat_buffer[ i++ ] = heat_map[ j++ ];
+		world_heat[ BUFFER ][ i++ ] = world_heat[ MAP ][ j++ ];
 
 
 	/** + SOUTH */
@@ -647,12 +646,12 @@ void comp_world_heat_v2( float *heat_map, float *heat_buffer,
 	j = 0;
 
 	while (i < params->world_size)
-		heat_buffer[ i++ ] += heat_map[ j++ ];
+		world_heat[ BUFFER ][ i++ ] += world_heat[ MAP ][ j++ ];
 
 	i = 0;
 
 	while (i < params->world_width)
-		heat_buffer[ i++ ] += heat_map[ j++ ];
+		world_heat[ BUFFER ][ i++ ] += world_heat[ MAP ][ j++ ];
 
 
 	/** + EAST */
@@ -668,11 +667,11 @@ void comp_world_heat_v2( float *heat_map, float *heat_buffer,
 
 		while (c > 1)
 		{
-			heat_buffer[ i++ ] += heat_map[ j++ ];
+			world_heat[ BUFFER ][ i++ ] += world_heat[ MAP ][ j++ ];
 			c--;
 		}
 
-		heat_buffer[ i++ ] += heat_map[ j - params->world_width ];
+		world_heat[ BUFFER ][ i++ ] += world_heat[ MAP ][ j - params->world_width ];
 	}
 
 
@@ -689,11 +688,11 @@ void comp_world_heat_v2( float *heat_map, float *heat_buffer,
 
 		while (c > 1)
 		{
-			heat_buffer[ i++ ] += heat_map[ j++ ];
+			world_heat[ BUFFER ][ i++ ] += world_heat[ MAP ][ j++ ];
 			c--;
 		}
 
-		heat_buffer[ i - params->world_width ] += heat_map[ j++ ];
+		world_heat[ BUFFER ][ i - params->world_width ] += world_heat[ MAP ][ j++ ];
 	}
 
 
@@ -710,19 +709,19 @@ void comp_world_heat_v2( float *heat_map, float *heat_buffer,
 
 		while (c > 1)
 		{
-			heat_buffer[ i++ ] += heat_map[ j++ ];
+			world_heat[ BUFFER ][ i++ ] += world_heat[ MAP ][ j++ ];
 			c--;
 		}
 
-		heat_buffer[ i++ ] += heat_map[ j - params->world_width ];
+		world_heat[ BUFFER ][ i++ ] += world_heat[ MAP ][ j - params->world_width ];
 	}
 
 	j = 1;
 
 	while (j < params->world_width)
-		heat_buffer[ i++ ] += heat_map[ j++ ];
+		world_heat[ BUFFER ][ i++ ] += world_heat[ MAP ][ j++ ];
 
-	heat_buffer[ i ] += heat_map[ 0 ];
+	world_heat[ BUFFER ][ i ] += world_heat[ MAP ][ 0 ];
 
 
 	/** + NORTHWEST */
@@ -738,20 +737,20 @@ void comp_world_heat_v2( float *heat_map, float *heat_buffer,
 
 		while (c > 1)
 		{
-			heat_buffer[ i++ ] += heat_map[ j++ ];
+			world_heat[ BUFFER ][ i++ ] += world_heat[ MAP ][ j++ ];
 			c--;
 		}
 
-		heat_buffer[ i - params->world_width ] += heat_map[ j++ ];
+		world_heat[ BUFFER ][ i - params->world_width ] += world_heat[ MAP ][ j++ ];
 	}
 
 	j = 0;
 	i++;
 
 	while (i < params->world_size)
-		heat_buffer[ i++ ] += heat_map[ j++ ];
+		world_heat[ BUFFER ][ i++ ] += world_heat[ MAP ][ j++ ];
 
-	heat_buffer[ i - params->world_width ] += heat_map[ j ];
+	world_heat[ BUFFER ][ i - params->world_width ] += world_heat[ MAP ][ j ];
 
 
 	/** + SOUTHEAST */
@@ -767,20 +766,20 @@ void comp_world_heat_v2( float *heat_map, float *heat_buffer,
 
 		while (c > 1)
 		{
-			heat_buffer[ i++ ] += heat_map[ j++ ];
+			world_heat[ BUFFER ][ i++ ] += world_heat[ MAP ][ j++ ];
 			c--;
 		}
 
-		heat_buffer[ i++ ] += heat_map[ j - params->world_width ];
+		world_heat[ BUFFER ][ i++ ] += world_heat[ MAP ][ j - params->world_width ];
 	}
 
 	i = 0;
 	j++;
 
 	while (j < params->world_size)
-		heat_buffer[ i++ ] += heat_map[ j++ ];
+		world_heat[ BUFFER ][ i++ ] += world_heat[ MAP ][ j++ ];
 
-	heat_buffer[ i ] += heat_map[ j - params->world_width ];
+	world_heat[ BUFFER ][ i ] += world_heat[ MAP ][ j - params->world_width ];
 
 
 	/** + SOUTHWEST */
@@ -796,19 +795,19 @@ void comp_world_heat_v2( float *heat_map, float *heat_buffer,
 
 		while (c > 1)
 		{
-			heat_buffer[ i++ ] += heat_map[ j++ ];
+			world_heat[ BUFFER ][ i++ ] += world_heat[ MAP ][ j++ ];
 			c--;
 		}
 
-		heat_buffer[ i - params->world_width ] += heat_map[ j++ ];
+		world_heat[ BUFFER ][ i - params->world_width ] += world_heat[ MAP ][ j++ ];
 	}
 
 	i = 1;
 
 	while (i < params->world_width)
-		heat_buffer[ i++ ] += heat_map[ j++ ];
+		world_heat[ BUFFER ][ i++ ] += world_heat[ MAP ][ j++ ];
 
-	heat_buffer[ 0 ] += heat_map[ j ];
+	world_heat[ BUFFER ][ 0 ] += world_heat[ MAP ][ j ];
 
 
 	/** Compute remaining heat and evaporation. */
@@ -816,22 +815,22 @@ void comp_world_heat_v2( float *heat_map, float *heat_buffer,
 	for (i = 0; i < params->world_size; i++)
 	{
 		/* Get the 8th of the diffusion percentage of all neighbour cells. */
-		heat_buffer[ i ] = heat_buffer[ i ] * params->world_diffusion_rate / 8;
+		world_heat[ BUFFER ][ i ] = world_heat[ BUFFER ][ i ] * params->world_diffusion_rate / 8;
 
 		/* Add cell's remaining heat. */
-		heat_buffer[ i ] += heat_map[ i ] * (1 - params->world_diffusion_rate);
+		world_heat[ BUFFER ][ i ] += world_heat[ MAP ][ i ] * (1 - params->world_diffusion_rate);
 
 
 		/** Compute evaporation. */
 
-		heat_buffer[ i ] = heat_buffer[ i ] * (1 - params->world_evaporation_rate);
+		world_heat[ BUFFER ][ i ] = world_heat[ BUFFER ][ i ] * (1 - params->world_evaporation_rate);
 	}
 
 
 	/** Swap, so BUFFER becomes the new MAP. */
 
 	/* Warning, this macro is using C99 extension. */
-	SWAP( heat_buffer, heat_map );
+	SWAP( world_heat[ BUFFER ], world_heat[ MAP ] );
 
 	return;
 }
@@ -865,7 +864,23 @@ unsigned int best_free_neighbour( const int todo, const float *const heat_map,
 		float heat;
 	} best, neighbour[ NUM_NEIGHBOURS ];
 
-	unsigned int NEIGHBOUR_IDX[ NUM_NEIGHBOURS ] = {SW, S, SE, W, E, NW, N, NE};
+	static unsigned int NEIGHBOUR_IDX[ NUM_NEIGHBOURS ] = {SW, S, SE, W, E, NW, N, NE};
+
+
+	/*
+	 * Fisher-Yates shuffle algorithm to shuffle the neighbour index vector
+	 * so we can pick a random (or a best) neighbour by checking each index
+	 * until find a first free (or a best).
+	 * */
+	for (size_t i = 0; i < NUM_NEIGHBOURS; i++)
+	{
+		size_t rnd_i = (size_t) g_random_int_range( i, NUM_NEIGHBOURS );
+
+		if (rnd_i == i) continue;	/* Next shuffle. */
+
+		/* Warning, this macro is using C99 extension. */
+		SWAP( NEIGHBOUR_IDX[ i ], NEIGHBOUR_IDX[ rnd_i ] );
+	}
 
 
 	/* Compute back the vector positions. Used on both, best */
@@ -911,31 +926,60 @@ unsigned int best_free_neighbour( const int todo, const float *const heat_map,
 
 		/* Actual bug location is the best location, until otherwise. */
 		best.pos = bug_locus;			/* Bug position. */
-		best.heat = heat_map[ best.pos ];	/* Temperature at */
-							/* bug position. */
+		best.heat = heat_map[ best.pos ];	/* Temperature at bug position. */
 
 		/* Loop unroll. */
 		if (todo == FIND_MAX_TEMPERATURE)
 		{
-			if (neighbour[ SW ].heat > best.heat) best = neighbour[ SW ];
-			if (neighbour[ S  ].heat > best.heat) best = neighbour[ S  ];
-			if (neighbour[ SE ].heat > best.heat) best = neighbour[ SE ];
-			if (neighbour[ W  ].heat > best.heat) best = neighbour[ W  ];
-			if (neighbour[ E  ].heat > best.heat) best = neighbour[ E  ];
-			if (neighbour[ NW ].heat > best.heat) best = neighbour[ NW ];
-			if (neighbour[ N  ].heat > best.heat) best = neighbour[ N  ];
-			if (neighbour[ NE ].heat > best.heat) best = neighbour[ NE ];
+			if (neighbour[ NEIGHBOUR_IDX[0] ].heat >= best.heat)
+				best = neighbour[ NEIGHBOUR_IDX[0] ];
+
+			if (neighbour[ NEIGHBOUR_IDX[1] ].heat >= best.heat)
+				best = neighbour[ NEIGHBOUR_IDX[1] ];
+
+			if (neighbour[ NEIGHBOUR_IDX[2] ].heat >= best.heat)
+				best = neighbour[ NEIGHBOUR_IDX[2] ];
+
+			if (neighbour[ NEIGHBOUR_IDX[3] ].heat >= best.heat)
+				best = neighbour[ NEIGHBOUR_IDX[3] ];
+
+			if (neighbour[ NEIGHBOUR_IDX[4] ].heat >= best.heat)
+				best = neighbour[ NEIGHBOUR_IDX[4] ];
+
+			if (neighbour[ NEIGHBOUR_IDX[5] ].heat >= best.heat)
+				best = neighbour[ NEIGHBOUR_IDX[5] ];
+
+			if (neighbour[ NEIGHBOUR_IDX[6] ].heat >= best.heat)
+				best = neighbour[ NEIGHBOUR_IDX[6] ];
+
+			if (neighbour[ NEIGHBOUR_IDX[7] ].heat >= best.heat)
+				best = neighbour[ NEIGHBOUR_IDX[7] ];
 		}
 		else	/* todo == FIND_MIN_TEMPERATURE */
 		{
-			if (neighbour[ SW ].heat < best.heat) best = neighbour[ SW ];
-			if (neighbour[ S  ].heat < best.heat) best = neighbour[ S  ];
-			if (neighbour[ SE ].heat < best.heat) best = neighbour[ SE ];
-			if (neighbour[ W  ].heat < best.heat) best = neighbour[ W  ];
-			if (neighbour[ E  ].heat < best.heat) best = neighbour[ E  ];
-			if (neighbour[ NW ].heat < best.heat) best = neighbour[ NW ];
-			if (neighbour[ N  ].heat < best.heat) best = neighbour[ N  ];
-			if (neighbour[ NE ].heat < best.heat) best = neighbour[ NE ];
+			if (neighbour[ NEIGHBOUR_IDX[0] ].heat <= best.heat)
+				best = neighbour[ NEIGHBOUR_IDX[0] ];
+
+			if (neighbour[ NEIGHBOUR_IDX[1] ].heat <= best.heat)
+				best = neighbour[ NEIGHBOUR_IDX[1] ];
+
+			if (neighbour[ NEIGHBOUR_IDX[2] ].heat <= best.heat)
+				best = neighbour[ NEIGHBOUR_IDX[2] ];
+
+			if (neighbour[ NEIGHBOUR_IDX[3] ].heat <= best.heat)
+				best = neighbour[ NEIGHBOUR_IDX[3] ];
+
+			if (neighbour[ NEIGHBOUR_IDX[4] ].heat <= best.heat)
+				best = neighbour[ NEIGHBOUR_IDX[4] ];
+
+			if (neighbour[ NEIGHBOUR_IDX[5] ].heat <= best.heat)
+				best = neighbour[ NEIGHBOUR_IDX[5] ];
+
+			if (neighbour[ NEIGHBOUR_IDX[6] ].heat <= best.heat)
+				best = neighbour[ NEIGHBOUR_IDX[6] ];
+
+			if (neighbour[ NEIGHBOUR_IDX[7] ].heat <= best.heat)
+				best = neighbour[ NEIGHBOUR_IDX[7] ];
 		}
 
 		/*
@@ -958,15 +1002,17 @@ unsigned int best_free_neighbour( const int todo, const float *const heat_map,
 	 * pick a random free neighbour by checking each index until find a
 	 * first free.
 	 * */
-	for (size_t i = 0; i < NUM_NEIGHBOURS; i++)
-	{
-		size_t rnd_i = (size_t) g_random_int_range( i, NUM_NEIGHBOURS );
 
-		if (rnd_i == i) continue;	/* Next shuffle. */
+//	 for (size_t i = 0; i < NUM_NEIGHBOURS; i++)
+//	{
+//		size_t rnd_i = (size_t) g_random_int_range( i, NUM_NEIGHBOURS );
 
-		/* Warning, this macro is using C99 extension. */
-		SWAP( NEIGHBOUR_IDX[ i ], NEIGHBOUR_IDX[ rnd_i ] );
-	}
+//		if (rnd_i == i) continue;	/* Next shuffle. */
+
+//		/* Warning, this macro is using C99 extension. */
+//		SWAP( NEIGHBOUR_IDX[ i ], NEIGHBOUR_IDX[ rnd_i ] );
+//	}
+
 
 	/* Loop unroll. */
 
@@ -1078,8 +1124,8 @@ void bug_step( bug_t *const swarm, unsigned int *const swarm_map,
 			In order to implement netlogo approach, that is
 			(in netlogo order), to compute:
 			1) random-move-chance,
-			2) best-patch for (temp <  ideal_temp) (when bug is in COLD),
-			3) best-patch for (temp >= ideal_temp) (when bug is in HOT),
+			2) best-patch for (temp <  ideal_temp) (when bug is COLD),
+			3) best-patch for (temp >= ideal_temp) (when bug is HOT),
 			we use the C conditional function twice.
 
 			A variable is used to hold what to do, (1), (2) or (3).
@@ -1162,8 +1208,7 @@ void simulate( HBBuffers_t *const buff, const Parameters_t *const params,
 		|| (params->numIterations == 0) )
 	{
 		/** Compute world heat, diffusion followed by evaporation. */
-		comp_world_heat_v2( buff->world_heat[ MAP ],
-					buff->world_heat[ BUFFER ], params );
+		comp_world_heat_v2( buff->world_heat, params );
 
 		/** Perform bug step. */
 		/* Use 'bufsel' to point the correct buffer. */
