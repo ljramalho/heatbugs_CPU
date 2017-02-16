@@ -928,57 +928,62 @@ unsigned int best_free_neighbour( const int todo, const float *const heat_map,
 		best.pos = bug_locus;			/* Bug position. */
 		best.heat = heat_map[ best.pos ];	/* Temperature at bug position. */
 
+		/*
+		   Find the hottest or coolest location in the neighbourhood;
+		   also take current position into consideration.
+		*/
+
 		/* Loop unroll. */
 		if (todo == FIND_MAX_TEMPERATURE)
 		{
-			if (neighbour[ NEIGHBOUR_IDX[0] ].heat >= best.heat)
+			if (neighbour[ NEIGHBOUR_IDX[0] ].heat > best.heat)
 				best = neighbour[ NEIGHBOUR_IDX[0] ];
 
-			if (neighbour[ NEIGHBOUR_IDX[1] ].heat >= best.heat)
+			if (neighbour[ NEIGHBOUR_IDX[1] ].heat > best.heat)
 				best = neighbour[ NEIGHBOUR_IDX[1] ];
 
-			if (neighbour[ NEIGHBOUR_IDX[2] ].heat >= best.heat)
+			if (neighbour[ NEIGHBOUR_IDX[2] ].heat > best.heat)
 				best = neighbour[ NEIGHBOUR_IDX[2] ];
 
-			if (neighbour[ NEIGHBOUR_IDX[3] ].heat >= best.heat)
+			if (neighbour[ NEIGHBOUR_IDX[3] ].heat > best.heat)
 				best = neighbour[ NEIGHBOUR_IDX[3] ];
 
-			if (neighbour[ NEIGHBOUR_IDX[4] ].heat >= best.heat)
+			if (neighbour[ NEIGHBOUR_IDX[4] ].heat > best.heat)
 				best = neighbour[ NEIGHBOUR_IDX[4] ];
 
-			if (neighbour[ NEIGHBOUR_IDX[5] ].heat >= best.heat)
+			if (neighbour[ NEIGHBOUR_IDX[5] ].heat > best.heat)
 				best = neighbour[ NEIGHBOUR_IDX[5] ];
 
-			if (neighbour[ NEIGHBOUR_IDX[6] ].heat >= best.heat)
+			if (neighbour[ NEIGHBOUR_IDX[6] ].heat > best.heat)
 				best = neighbour[ NEIGHBOUR_IDX[6] ];
 
-			if (neighbour[ NEIGHBOUR_IDX[7] ].heat >= best.heat)
+			if (neighbour[ NEIGHBOUR_IDX[7] ].heat > best.heat)
 				best = neighbour[ NEIGHBOUR_IDX[7] ];
 		}
 		else	/* todo == FIND_MIN_TEMPERATURE */
 		{
-			if (neighbour[ NEIGHBOUR_IDX[0] ].heat <= best.heat)
+			if (neighbour[ NEIGHBOUR_IDX[0] ].heat < best.heat)
 				best = neighbour[ NEIGHBOUR_IDX[0] ];
 
-			if (neighbour[ NEIGHBOUR_IDX[1] ].heat <= best.heat)
+			if (neighbour[ NEIGHBOUR_IDX[1] ].heat < best.heat)
 				best = neighbour[ NEIGHBOUR_IDX[1] ];
 
-			if (neighbour[ NEIGHBOUR_IDX[2] ].heat <= best.heat)
+			if (neighbour[ NEIGHBOUR_IDX[2] ].heat < best.heat)
 				best = neighbour[ NEIGHBOUR_IDX[2] ];
 
-			if (neighbour[ NEIGHBOUR_IDX[3] ].heat <= best.heat)
+			if (neighbour[ NEIGHBOUR_IDX[3] ].heat < best.heat)
 				best = neighbour[ NEIGHBOUR_IDX[3] ];
 
-			if (neighbour[ NEIGHBOUR_IDX[4] ].heat <= best.heat)
+			if (neighbour[ NEIGHBOUR_IDX[4] ].heat < best.heat)
 				best = neighbour[ NEIGHBOUR_IDX[4] ];
 
-			if (neighbour[ NEIGHBOUR_IDX[5] ].heat <= best.heat)
+			if (neighbour[ NEIGHBOUR_IDX[5] ].heat < best.heat)
 				best = neighbour[ NEIGHBOUR_IDX[5] ];
 
-			if (neighbour[ NEIGHBOUR_IDX[6] ].heat <= best.heat)
+			if (neighbour[ NEIGHBOUR_IDX[6] ].heat < best.heat)
 				best = neighbour[ NEIGHBOUR_IDX[6] ];
 
-			if (neighbour[ NEIGHBOUR_IDX[7] ].heat <= best.heat)
+			if (neighbour[ NEIGHBOUR_IDX[7] ].heat < best.heat)
 				best = neighbour[ NEIGHBOUR_IDX[7] ];
 		}
 
